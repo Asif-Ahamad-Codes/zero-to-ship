@@ -729,6 +729,65 @@ p {
   display: none;
 }
 
+.job-description-label {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin: 19px 0 10px;
+  cursor: pointer;
+}
+
+.job-description-label .step-number {
+  width: 29px;
+  height: 29px;
+}
+
+.job-description-label strong,
+.job-description-label small {
+  display: block;
+}
+
+.job-description-label strong {
+  margin-bottom: 4px;
+  font-size: 10px;
+}
+
+.job-description-label small {
+  color: #82897e;
+  font-size: 9px;
+}
+
+.job-description-input {
+  display: block;
+  width: 100%;
+  min-height: 105px;
+  resize: vertical;
+  padding: 11px 12px;
+  border: 1px solid #e1e7dc;
+  border-radius: 7px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 10px;
+  line-height: 1.6;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.job-description-input::placeholder {
+  color: #a0a69c;
+}
+
+.job-description-input:focus {
+  border-color: #9eb393;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(117, 148, 98, 0.12);
+}
+
+.job-description-input:disabled {
+  background: #f8f9f6;
+  cursor: wait;
+}
+
 .file-badge {
   display: grid;
   width: 33px;

@@ -149,10 +149,12 @@ function Hero() {
 function UploadCard({
   fileInputRef,
   file,
+  jobDescription,
   error,
   isAnalyzing,
   isAnalyzed,
   onFileSelected,
+  onJobDescriptionChange,
   onRemoveFile,
   onAnalyze,
 }) {
@@ -170,7 +172,7 @@ function UploadCard({
         <span className="step-number">01</span>
         <div>
           <h3>Your resume</h3>
-          <p>Start with a PDF of your latest resume.</p>
+          <p>Upload a PDF and add the job you’re applying for.</p>
         </div>
       </div>
 
@@ -252,6 +254,23 @@ function UploadCard({
         </div>
       )}
 
+      <label className="job-description-label" htmlFor="job-description">
+        <span className="step-number">02</span>
+        <span>
+          <strong>Job description</strong>
+          <small>Paste the role details you want to compare against.</small>
+        </span>
+      </label>
+      <textarea
+        id="job-description"
+        className="job-description-input"
+        value={jobDescription}
+        maxLength={50000}
+        placeholder="Paste the job description here..."
+        disabled={isAnalyzing}
+        onChange={(event) => onJobDescriptionChange(event.target.value)}
+      />
+
       {error && (
         <p className="upload-error" role="alert">
           {error}
@@ -261,15 +280,15 @@ function UploadCard({
       <button
         className={`primary-button analyze-button${isAnalyzing ? " is-loading" : ""}`}
         type="button"
-        disabled={!file || isAnalyzing}
+        disabled={!file || !jobDescription.trim() || isAnalyzing}
         onClick={onAnalyze}
       >
         <span className="button-label">
           {isAnalyzing
             ? "Putting together your preview"
             : isAnalyzed
-              ? "Preview updated"
-              : "Take a look"}
+              ? "Compare again"
+              : "Compare resume"}
         </span>
         {!isAnalyzing && <ArrowIcon />}
       </button>
@@ -277,20 +296,30 @@ function UploadCard({
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M8 1.8 13 4v3.8c0 3.1-2.1 5.3-5 6.6-2.9-1.3-5-3.5-5-6.6V4l5-2.2Z" />
         </svg>
-        Your resume stays right here in your browser.
+        PDF is processed in memory and never saved.
       </p>
     </div>
   );
 }
 
-function ResumeReport({ file, isAnalyzed, reportTitleRef }) {
+function ResumeReport({ analysis, isAnalyzed, reportTitleRef }) {
+  const score = analysis?.score ?? 82;
+  const matchedSkills = analysis?.matchedSkills ?? [
+    "React",
+    "TypeScript",
+    "Node.js",
+    "REST APIs",
+    "Git",
+  ];
+  const missingSkills = analysis?.missingSkills ?? ["Automated testing", "AWS", "CI/CD"];
+
   return (
     <article className="report-card" aria-live="polite" aria-labelledby="report-title">
       <div className="report-header">
         <div>
           <span className="report-overline">{isAnalyzed ? "DEMO RESULTS" : "YOUR PREVIEW"}</span>
           <h3 id="report-title" ref={reportTitleRef}>
-            {isAnalyzed ? file.name : "A snapshot of your strengths."}
+            {isAnalyzed ? analysis.resumeFileName : "A snapshot of your strengths."}
           </h3>
         </div>
         <span className="demo-badge">
@@ -300,7 +329,7 @@ function ResumeReport({ file, isAnalyzed, reportTitleRef }) {
 
       <div className="report-score-row">
         <div className="report-score">
-          82<span>/100</span>
+          {score}<span>/100</span>
         </div>
         <div className="report-score-description">
           <strong>Looking promising</strong>
@@ -314,14 +343,12 @@ function ResumeReport({ file, isAnalyzed, reportTitleRef }) {
         <div className="report-group-title">
           <span className="group-indicator present-indicator" />
           Skills you have
-          <span className="group-count">5</span>
+          <span className="group-count">{matchedSkills.length}</span>
         </div>
         <div className="report-chips">
-          <span>React</span>
-          <span>TypeScript</span>
-          <span>Node.js</span>
-          <span>REST APIs</span>
-          <span>Git</span>
+          {matchedSkills.map((skill) => (
+            <span key={skill}>{skill}</span>
+          ))}
         </div>
       </div>
 
@@ -329,19 +356,19 @@ function ResumeReport({ file, isAnalyzed, reportTitleRef }) {
         <div className="report-group-title">
           <span className="group-indicator missing-indicator" />
           Skills to explore
-          <span className="group-count">3</span>
+          <span className="group-count">{missingSkills.length}</span>
         </div>
         <div className="report-chips missing-chips">
-          <span>Automated testing</span>
-          <span>AWS</span>
-          <span>CI/CD</span>
+          {missingSkills.map((skill) => (
+            <span key={skill}>{skill}</span>
+          ))}
         </div>
       </div>
 
       <p className="report-footnote">
         <span aria-hidden="true">✳</span>{" "}
         {isAnalyzed
-          ? "This is a sample report — your PDF hasn’t been parsed."
+          ? "This is a sample report — AI comparison will be added later."
           : "Example results shown — upload a PDF to see the demo flow."}
       </p>
     </article>
@@ -412,12 +439,14 @@ function formatFileSize(bytes) {
 
 export default function App() {
   const [file, setFile] = useState(null);
+  const [jobDescription, setJobDescription] = useState("");
   const [error, setError] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzed, setIsAnalyzed] = useState(false);
+  const [analysis, setAnalysis] = useState(null);
   const fileInputRef = useRef(null);
   const reportTitleRef = useRef(null);
-  const analysisTimerRef = useRef(null);
+  const analysisRequestRef = useRef(null);
 
   useEffect(() => {
     if (isAnalyzed) {
@@ -428,17 +457,14 @@ export default function App() {
     }
   }, [isAnalyzed]);
 
-  useEffect(
-    () => () => {
-      window.clearTimeout(analysisTimerRef.current);
-    },
-    [],
-  );
+  useEffect(() => () => analysisRequestRef.current?.abort(), []);
 
   function handleFileSelected(nextFile) {
-    window.clearTimeout(analysisTimerRef.current);
+    analysisRequestRef.current?.abort();
+    analysisRequestRef.current = null;
     setIsAnalyzing(false);
     setIsAnalyzed(false);
+    setAnalysis(null);
     setError("");
 
     if (!nextFile) {
@@ -447,6 +473,7 @@ export default function App() {
 
     if (nextFile.type !== "application/pdf" && !nextFile.name.toLowerCase().endsWith(".pdf")) {
       setFile(null);
+      setAnalysis(null);
       setError("Please choose a PDF file to continue.");
       return;
     }
@@ -467,23 +494,56 @@ export default function App() {
   }
 
   function handleRemoveFile() {
-    window.clearTimeout(analysisTimerRef.current);
+    analysisRequestRef.current?.abort();
+    analysisRequestRef.current = null;
     setFile(null);
     setError("");
     setIsAnalyzing(false);
     setIsAnalyzed(false);
+    setAnalysis(null);
   }
 
-  function handleAnalyze() {
-    if (!file || isAnalyzing) {
+  async function handleAnalyze() {
+    if (!file || !jobDescription.trim() || isAnalyzing) {
       return;
     }
 
+    setError("");
     setIsAnalyzing(true);
-    analysisTimerRef.current = window.setTimeout(() => {
-      setIsAnalyzing(false);
+    const formData = new FormData();
+    formData.append("resume", file);
+    formData.append("jobDescription", jobDescription);
+    const controller = new AbortController();
+    analysisRequestRef.current = controller;
+
+    try {
+      const response = await fetch("/api/analyses", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload.error || "The comparison could not be completed.");
+      }
+
+      setAnalysis(payload.analysis);
       setIsAnalyzed(true);
-    }, 650);
+    } catch (requestError) {
+      if (requestError.name !== "AbortError") {
+        setError(
+          requestError instanceof TypeError
+            ? "Could not reach the server. Make sure the backend is running and connected to MongoDB."
+            : requestError.message,
+        );
+      }
+    } finally {
+      if (analysisRequestRef.current === controller) {
+        analysisRequestRef.current = null;
+        setIsAnalyzing(false);
+      }
+    }
   }
 
   return (
@@ -510,25 +570,34 @@ export default function App() {
               A BETTER STARTING POINT
             </div>
             <h2 id="analyzer-title">Let’s take a look.</h2>
-            <p>Drop in your resume and get a feel for where you stand.</p>
+            <p>Compare your resume with a job description.</p>
           </div>
 
           <div className="analyzer-layout">
             <UploadCard
               fileInputRef={fileInputRef}
               file={file}
+              jobDescription={jobDescription}
               error={error}
               isAnalyzing={isAnalyzing}
               isAnalyzed={isAnalyzed}
               onFileSelected={handleFileSelected}
+              onJobDescriptionChange={(value) => {
+                setJobDescription(value);
+                setIsAnalyzed(false);
+              }}
               onRemoveFile={handleRemoveFile}
               onAnalyze={handleAnalyze}
             />
-            <ResumeReport file={file} isAnalyzed={isAnalyzed} reportTitleRef={reportTitleRef} />
+            <ResumeReport
+              analysis={analysis}
+              isAnalyzed={isAnalyzed}
+              reportTitleRef={reportTitleRef}
+            />
           </div>
           <p className="demo-disclaimer">
-            Just exploring? This is a design demo — uploaded files aren’t parsed, and the sample
-            results aren’t based on your resume.
+            Resume PDFs are processed in memory and aren’t stored. Comparison scores and skills are
+            mock examples until AI analysis is added.
           </p>
         </section>
 

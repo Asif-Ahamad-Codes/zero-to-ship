@@ -10,6 +10,7 @@ export function createApp({
   AnalysisModel = Analysis,
   databaseConnected = isDatabaseConnected,
   analysisOptions,
+  databaseMiddleware,
 } = {}) {
   const app = express();
   const analysisService = createAnalysisService(AnalysisModel, analysisOptions);
@@ -19,6 +20,10 @@ export function createApp({
       origin: process.env.FRONTEND_ORIGIN || "http://localhost:5173",
     }),
   );
+
+  if (databaseMiddleware) {
+    app.use("/api", databaseMiddleware);
+  }
 
   app.get("/api/health", (_request, response) => {
     const connected = databaseConnected();

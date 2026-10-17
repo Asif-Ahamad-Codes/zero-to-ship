@@ -25,3 +25,15 @@ export function disconnectDatabase() {
 export function isDatabaseConnected() {
   return mongoose.connection.readyState === 1;
 }
+
+export function createDatabaseMiddleware() {
+  return async (_request, response, next) => {
+    try {
+      await connectDatabase(process.env.MONGODB_URI);
+      next();
+    } catch (error) {
+      console.error("Could not connect to MongoDB:", error.message);
+      response.status(503).json({ error: "The database is currently unavailable." });
+    }
+  };
+}

@@ -3,6 +3,12 @@ import { once } from "node:events";
 import { createServer } from "node:http";
 import test from "node:test";
 import { createApp } from "../app.js";
+import deployedApp from "../server.js";
+
+test("Vercel entry point exports the Express app", () => {
+  assert.equal(typeof deployedApp, "function");
+  assert.equal(typeof deployedApp.listen, "function");
+});
 
 async function startTestServer({ analysisOptions } = {}) {
   const createdRecords = [];
@@ -166,5 +172,29 @@ test("GET /api/health reports the database connection state", async (t) => {
   assert.deepEqual(await response.json(), {
     status: "unavailable",
     database: "disconnected",
+  });
+});
+
+test("API returns JSON when MongoDB cannot connect", async (t) => {
+  const app = createApp({
+    databaseMiddleware: async (_request, response) => {
+      response.status(503).json({ error: "The database is currently unavailable." });
+    },
+  });
+  const server = createServer(app);
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => new Promise((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  }));
+
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/analyses`, {
+    method: "POST",
+    body: createForm(),
+  });
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), {
+    error: "The database is currently unavailable.",
   });
 });

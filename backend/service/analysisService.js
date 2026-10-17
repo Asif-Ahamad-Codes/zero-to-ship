@@ -10,7 +10,12 @@ globalThis.Path2D ??= Path2D;
 let pdfParsePromise;
 
 function getPdfParse() {
-  pdfParsePromise ??= import("pdf-parse").then(({ PDFParse }) => PDFParse);
+  pdfParsePromise ??= import("pdfjs-dist/legacy/build/pdf.worker.mjs")
+    .then((worker) => {
+      globalThis.pdfjsWorker = worker;
+      return import("pdf-parse");
+    })
+    .then(({ PDFParse }) => PDFParse);
   return pdfParsePromise;
 }
 

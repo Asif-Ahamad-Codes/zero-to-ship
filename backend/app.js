@@ -27,6 +27,10 @@ export function createApp({
     });
   });
 
+  app.get("/", (_request, response) => {
+    response.json({ name: "0 to Shipped Resume Parser API", status: "ok" });
+  });
+
   app.use("/api/analyses", createAnalysisRouter(analysisService));
   app.use(errorHandler);
 

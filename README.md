@@ -40,6 +40,23 @@ timestamps.
    Vite runs at `http://localhost:5173` and proxies `/api` requests to Express at
    `http://localhost:5000`.
 
+## Deploying to Vercel
+
+Create two Vercel projects from this repository:
+
+1. Set the frontend project's **Root Directory** to `frontend`. Its `vercel.json` builds the Vite
+   app and serves the SPA from `dist/`.
+2. Set the backend project's **Root Directory** to `backend`. Its `vercel.json` routes requests to
+   the Express serverless handler in `server.js`.
+3. In the backend project's environment variables, set `MONGODB_URI` to your MongoDB connection
+   string and `FRONTEND_ORIGIN` to the deployed frontend origin (for example,
+   `https://your-frontend-project.vercel.app`).
+4. In the frontend project's environment variables, set `VITE_API_URL` to the deployed backend
+   origin (for example, `https://your-backend-project.vercel.app`), then redeploy the frontend.
+
+The backend reuses its MongoDB connection between warm function invocations. Uploaded PDF data
+remains in request memory and is not persisted.
+
 ## API
 
 - `GET /api/health` — API and database connection status.

@@ -517,7 +517,8 @@ export default function App() {
     analysisRequestRef.current = controller;
 
     try {
-      const response = await fetch("/api/analyses", {
+      const apiBaseUrl = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+      const response = await fetch(`${apiBaseUrl}/api/analyses`, {
         method: "POST",
         body: formData,
         signal: controller.signal,

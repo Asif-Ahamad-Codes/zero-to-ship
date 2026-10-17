@@ -4,8 +4,4 @@ import { createDatabaseMiddleware } from "./config/database.js";
 
 const app = createApp({ databaseMiddleware: createDatabaseMiddleware() });
 
-export const config = {
-  maxDuration: 60,
-};
-
 export default app;

@@ -23,14 +23,27 @@ export class AnalysisError extends Error {
 }
 
 export async function extractResumeText(buffer) {
-  const PDFParse = await getPdfParse();
   let parser;
   let parsedPdf;
 
   try {
+    const PDFParse = await getPdfParse();
     parser = new PDFParse({ data: buffer });
     parsedPdf = await parser.getText();
-  } catch {
+  } catch (error) {
+    console.error("PDF text extraction failed:", {
+      name: error.name,
+      message: error.message,
+      code: error.code,
+    });
+
+    if (/password|encrypted/i.test(`${error.name} ${error.message} ${error.code}`)) {
+      throw new AnalysisError(
+        "This PDF is password-protected. Remove its password and try again.",
+        422,
+      );
+    }
+
     throw new AnalysisError("We couldn’t read this PDF. Please try a text-based PDF.", 422);
   } finally {
     await parser?.destroy();

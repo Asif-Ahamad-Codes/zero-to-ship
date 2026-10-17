@@ -39,6 +39,30 @@ test("extractResumeText extracts selectable text from a PDF", async () => {
   assert.match(text, /Resume text extraction works/);
 });
 
+test("extractResumeText logs parser diagnostics and returns a safe error for invalid PDFs", async () => {
+  const originalConsoleError = console.error;
+  let diagnostic;
+  console.error = (...args) => {
+    diagnostic = args;
+  };
+
+  try {
+    await assert.rejects(
+      extractResumeText(Buffer.from("%PDF-1.7\ninvalid")),
+      (error) =>
+        error instanceof AnalysisError &&
+        error.statusCode === 422 &&
+        /couldn’t read this PDF/.test(error.message),
+    );
+  } finally {
+    console.error = originalConsoleError;
+  }
+
+  assert.equal(diagnostic[0], "PDF text extraction failed:");
+  assert.equal(typeof diagnostic[1].name, "string");
+  assert.equal(typeof diagnostic[1].message, "string");
+});
+
 test("requestLabdAnalysis sends resume and job description with the server-side key", async (t) => {
   const originalFetch = globalThis.fetch;
   let request;

@@ -31,9 +31,19 @@ const analysisSchema = new mongoose.Schema(
       type: [String],
       required: true,
     },
+    summary: {
+      type: String,
+      required: true,
+      maxlength: 1000,
+    },
+    creditsPercentLeft: {
+      type: Number,
+      min: 0,
+      max: 100,
+    },
     isMock: {
       type: Boolean,
-      default: true,
+      default: false,
     },
   },
   { timestamps: true },

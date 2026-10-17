@@ -36,6 +36,8 @@ export function createAnalysisController(analysisService) {
           score: analysis.score,
           matchedSkills: analysis.matchedSkills,
           missingSkills: analysis.missingSkills,
+          summary: analysis.summary,
+          creditsPercentLeft: analysis.creditsPercentLeft,
           isMock: analysis.isMock,
           createdAt: analysis.createdAt,
         },

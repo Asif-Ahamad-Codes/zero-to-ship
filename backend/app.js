@@ -9,9 +9,10 @@ import { createAnalysisRouter } from "./routes/analysisRoutes.js";
 export function createApp({
   AnalysisModel = Analysis,
   databaseConnected = isDatabaseConnected,
+  analysisOptions,
 } = {}) {
   const app = express();
-  const analysisService = createAnalysisService(AnalysisModel);
+  const analysisService = createAnalysisService(AnalysisModel, analysisOptions);
 
   app.use(
     cors({

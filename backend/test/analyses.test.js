@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import test from "node:test";
 import { createApp } from "../app.js";
 
-async function startTestServer() {
+async function startTestServer({ analysisOptions } = {}) {
   const createdRecords = [];
   const app = createApp({
     AnalysisModel: {
@@ -17,6 +17,23 @@ async function startTestServer() {
         createdRecords.push(record);
         return record;
       },
+    },
+    analysisOptions: {
+      async extractText() {
+        return "Experienced React developer with TypeScript, Node.js, REST APIs, and Git.";
+      },
+      async analyze({ resumeText, jobDescription }) {
+        assert.match(resumeText, /Experienced React developer/);
+        assert.match(jobDescription, /React application/);
+        return {
+          score: 82,
+          matchedSkills: ["React", "TypeScript"],
+          missingSkills: ["AWS"],
+          summary: "Strong React experience; AWS experience is not listed.",
+          creditsPercentLeft: 74,
+        };
+      },
+      ...analysisOptions,
     },
   });
   const server = createServer(app);
@@ -46,7 +63,7 @@ function createForm({ pdf = true, jobDescription = "Build and maintain a React a
   return form;
 }
 
-test("POST /api/analyses stores a mock comparison without storing the PDF", async (t) => {
+test("POST /api/analyses stores an AI comparison without storing the PDF", async (t) => {
   const server = await startTestServer();
   t.after(server.close);
 
@@ -58,11 +75,35 @@ test("POST /api/analyses stores a mock comparison without storing the PDF", asyn
 
   assert.equal(response.status, 201);
   assert.equal(payload.analysis.score, 82);
-  assert.equal(payload.analysis.isMock, true);
-  assert.deepEqual(payload.analysis.matchedSkills, ["React", "TypeScript", "Node.js", "REST APIs", "Git"]);
+  assert.equal(payload.analysis.isMock, false);
+  assert.deepEqual(payload.analysis.matchedSkills, ["React", "TypeScript"]);
+  assert.equal(payload.analysis.summary, "Strong React experience; AWS experience is not listed.");
+  assert.equal(payload.analysis.creditsPercentLeft, 74);
   assert.equal(server.createdRecords.length, 1);
   assert.equal("resumeBuffer" in server.createdRecords[0], false);
   assert.equal(server.createdRecords[0].jobDescription, "Build and maintain a React application.");
+});
+
+test("POST /api/analyses returns AI service errors without saving a result", async (t) => {
+  const server = await startTestServer({
+    analysisOptions: {
+      async analyze() {
+        const error = new Error("The AI service is busy. Please wait a moment and try again.");
+        error.statusCode = 429;
+        throw error;
+      },
+    },
+  });
+  t.after(server.close);
+
+  const response = await fetch(`${server.url}/api/analyses`, {
+    method: "POST",
+    body: createForm(),
+  });
+
+  assert.equal(response.status, 429);
+  assert.match((await response.json()).error, /AI service is busy/i);
+  assert.equal(server.createdRecords.length, 0);
 });
 
 test("POST /api/analyses rejects a request without a PDF", async (t) => {

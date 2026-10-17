@@ -2,6 +2,10 @@ import multer from "multer";
 import { MAX_FILE_SIZE, MAX_JOB_DESCRIPTION_LENGTH } from "./upload.js";
 
 export function errorHandler(error, _request, response, _next) {
+  if (Number.isInteger(error.statusCode) && error.statusCode >= 400 && error.statusCode < 600) {
+    return response.status(error.statusCode).json({ error: error.message });
+  }
+
   if (error instanceof multer.MulterError) {
     if (error.code === "LIMIT_FILE_SIZE") {
       return response.status(413).json({

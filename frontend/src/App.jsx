@@ -296,7 +296,7 @@ function UploadCard({
         <svg viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path d="M8 1.8 13 4v3.8c0 3.1-2.1 5.3-5 6.6-2.9-1.3-5-3.5-5-6.6V4l5-2.2Z" />
         </svg>
-        PDF is processed in memory and never saved.
+        PDF text and the job description are sent to Labd AI for analysis, but aren’t stored.
       </p>
     </div>
   );
@@ -317,13 +317,13 @@ function ResumeReport({ analysis, isAnalyzed, reportTitleRef }) {
     <article className="report-card" aria-live="polite" aria-labelledby="report-title">
       <div className="report-header">
         <div>
-          <span className="report-overline">{isAnalyzed ? "DEMO RESULTS" : "YOUR PREVIEW"}</span>
+          <span className="report-overline">{isAnalyzed ? "AI RESULTS" : "YOUR PREVIEW"}</span>
           <h3 id="report-title" ref={reportTitleRef}>
             {isAnalyzed ? analysis.resumeFileName : "A snapshot of your strengths."}
           </h3>
         </div>
         <span className="demo-badge">
-          <span /> {isAnalyzed ? "MOCK ANALYSIS" : "SAMPLE"}
+          <span /> {isAnalyzed ? "AI ANALYSIS" : "SAMPLE"}
         </span>
       </div>
 
@@ -332,8 +332,8 @@ function ResumeReport({ analysis, isAnalyzed, reportTitleRef }) {
           {score}<span>/100</span>
         </div>
         <div className="report-score-description">
-          <strong>Looking promising</strong>
-          <span>There’s a solid foundation here.</span>
+          <strong>{isAnalyzed ? "Resume compared" : "Looking promising"}</strong>
+          <span>{isAnalyzed ? analysis.summary : "There’s a solid foundation here."}</span>
         </div>
       </div>
 
@@ -368,7 +368,11 @@ function ResumeReport({ analysis, isAnalyzed, reportTitleRef }) {
       <p className="report-footnote">
         <span aria-hidden="true">✳</span>{" "}
         {isAnalyzed
-          ? "This is a sample report — AI comparison will be added later."
+          ? `AI-generated comparison based on the resume and job description you provided.${
+              Number.isFinite(analysis.creditsPercentLeft)
+                ? ` ${analysis.creditsPercentLeft}% of the AI allowance remains.`
+                : ""
+            }`
           : "Example results shown — upload a PDF to see the demo flow."}
       </p>
     </article>
@@ -596,8 +600,8 @@ export default function App() {
             />
           </div>
           <p className="demo-disclaimer">
-            Resume PDFs are processed in memory and aren’t stored. Comparison scores and skills are
-            mock examples until AI analysis is added.
+            Your PDF is processed in memory. Its extracted text and the job description are sent to
+            Labd AI; the PDF itself is not stored.
           </p>
         </section>
 

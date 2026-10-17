@@ -3,12 +3,12 @@
 The project contains a React/Vite frontend in `frontend/` and an Express/MongoDB API in `backend/`.
 The backend is organized into `routes/`, `controller/`, `service/`, `config/`, and `middleware/`,
 with `server.js` as its entry point and `utils.js` for shared helpers.
-The API accepts a resume PDF and a job description, saves a mock comparison record, and returns
-sample score and skill data. AI-based resume/JD analysis is not implemented yet.
+The API accepts a resume PDF and a job description, extracts selectable PDF text in memory, sends
+the text and job description to Labd AI, and saves the returned comparison record.
 
-Uploaded PDF bytes are held in memory only for request validation and are never written to MongoDB
-or disk. MongoDB stores the PDF filename and size, job description, mock score, skill lists, and
-timestamps.
+Uploaded PDF bytes and extracted text are held in memory only and are never written to MongoDB or
+disk. Resume text and the job description are sent to Labd AI. MongoDB stores the PDF filename and
+size, job description, AI score, skill lists, summary, and timestamps.
 
 ## Requirements
 
@@ -25,7 +25,8 @@ timestamps.
    ```
 
 2. Create `backend/.env` from `backend/.env.example` and set `MONGODB_URI` to your MongoDB
-   connection string.
+   connection string and `LABD_API_KEY` to your Labd API key. Keep this key on the backend; never
+   expose it as a frontend variable.
 
 3. Start the API and frontend in separate terminals from the repository root:
 
@@ -46,12 +47,18 @@ Deploy this repository as one Vercel project with the repository root as its pro
 `vercel.json` defines two services: `backend` (root `backend/`) and `frontend` (root `frontend/`).
 Requests to `/api/*` are routed to the backend; all other paths are routed to the frontend.
 
-Set `MONGODB_URI` in the Vercel project's environment variables. The frontend calls the same-origin
-`/api` path, so no frontend API URL or service binding is needed. Locally, Vite proxies `/api`
-requests to the backend at `http://localhost:5000`.
+Set `MONGODB_URI` and `LABD_API_KEY` in the Vercel project's environment variables. The frontend
+calls the same-origin `/api` path, so no frontend API URL or service binding is needed. Locally,
+Vite proxies `/api` requests to the backend at `http://localhost:5000`.
 
-The backend reuses its MongoDB connection between warm function invocations. Uploaded PDF data
-remains in request memory and is not persisted.
+The backend reuses its MongoDB connection between warm function invocations. Uploaded PDF data and
+extracted resume text are not persisted, but the extracted text and job description are sent to
+Labd AI for analysis.
+
+The backend extracts selectable text from PDFs in memory (scanned-image PDFs are not supported),
+then asks Labd for a JSON score, matched skills, missing skills, and summary. `LABD_API_KEY` is sent
+only in the backend's `Authorization` header. Labd allowance and rate-limit responses are surfaced
+as actionable errors; AI results are saved only after a valid response is received.
 
 ## API
 

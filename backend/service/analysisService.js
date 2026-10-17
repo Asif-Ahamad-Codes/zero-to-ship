@@ -1,7 +1,18 @@
-import { PDFParse } from "pdf-parse";
+import { DOMMatrix, ImageData, Path2D } from "@napi-rs/canvas";
 
 const LABD_CHAT_URL = "https://agent.thedevlabs.io/v1/api/chat";
 const MAX_RESUME_TEXT_LENGTH = 40000;
+
+globalThis.DOMMatrix ??= DOMMatrix;
+globalThis.ImageData ??= ImageData;
+globalThis.Path2D ??= Path2D;
+
+let pdfParsePromise;
+
+function getPdfParse() {
+  pdfParsePromise ??= import("pdf-parse").then(({ PDFParse }) => PDFParse);
+  return pdfParsePromise;
+}
 
 export class AnalysisError extends Error {
   constructor(message, statusCode = 502) {
@@ -12,6 +23,7 @@ export class AnalysisError extends Error {
 }
 
 export async function extractResumeText(buffer) {
+  const PDFParse = await getPdfParse();
   let parser;
   let parsedPdf;
 

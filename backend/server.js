@@ -5,6 +5,10 @@ import { connectDatabase, disconnectDatabase } from "./config/database.js";
 const port = Number(process.env.PORT || 5000);
 const app = createApp();
 
+export const config = {
+  maxDuration: 60,
+};
+
 export default async function handler(request, response) {
   try {
     await connectDatabase(process.env.MONGODB_URI);

@@ -526,10 +526,26 @@ export default function App() {
         body: formData,
         signal: controller.signal,
       });
-      const payload = await response.json();
+      const responseText = await response.text();
+      let payload;
+
+      try {
+        payload = responseText ? JSON.parse(responseText) : {};
+      } catch {
+        const isHtmlResponse = /<!doctype html|<html[\s>]/i.test(responseText);
+        const serverMessage =
+          !isHtmlResponse && responseText.length <= 240 ? `: ${responseText}` : "";
+        throw new Error(
+          `The API returned an unreadable response (HTTP ${response.status})${serverMessage}. Check the backend deployment logs.`,
+        );
+      }
 
       if (!response.ok) {
         throw new Error(payload.error || "The comparison could not be completed.");
+      }
+
+      if (!payload.analysis) {
+        throw new Error("The API response did not include an analysis. Check the backend deployment logs.");
       }
 
       setAnalysis(payload.analysis);

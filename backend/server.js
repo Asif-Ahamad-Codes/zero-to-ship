@@ -1,17 +1,11 @@
 import "dotenv/config";
-import mongoose from "mongoose";
 import { createApp } from "./app.js";
+import { connectDatabase, disconnectDatabase } from "./config/database.js";
 
 const port = Number(process.env.PORT || 5000);
-const mongoUri = process.env.MONGODB_URI;
-
-if (!mongoUri) {
-  console.error("MONGODB_URI is required. Copy backend/.env.example to backend/.env and set it.");
-  process.exit(1);
-}
 
 try {
-  await mongoose.connect(mongoUri);
+  await connectDatabase(process.env.MONGODB_URI);
   const server = createApp().listen(port, () => {
     console.log(`Resume parser API listening on http://localhost:${port}`);
   });
@@ -24,7 +18,7 @@ try {
           process.exitCode = 1;
         }
 
-        mongoose.disconnect().catch((disconnectError) => {
+        disconnectDatabase().catch((disconnectError) => {
           console.error("Could not disconnect from MongoDB cleanly:", disconnectError.message);
           process.exitCode = 1;
         });
@@ -32,6 +26,6 @@ try {
     });
   }
 } catch (error) {
-  console.error("Could not connect to MongoDB:", error.message);
+  console.error("Could not start the API:", error.message);
   process.exit(1);
 }

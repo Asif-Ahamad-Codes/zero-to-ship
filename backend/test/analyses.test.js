@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { createServer } from "node:http";
 import test from "node:test";
-import { createApp } from "../src/app.js";
+import { createApp } from "../app.js";
 
 async function startTestServer() {
   const createdRecords = [];
@@ -108,4 +108,22 @@ test("POST /api/analyses rejects a missing job description", async (t) => {
   assert.equal(response.status, 400);
   assert.match((await response.json()).error, /job description/i);
   assert.equal(server.createdRecords.length, 0);
+});
+
+test("GET /api/health reports the database connection state", async (t) => {
+  const app = createApp({ databaseConnected: () => false });
+  const server = createServer(app);
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => new Promise((resolve, reject) => {
+    server.close((error) => (error ? reject(error) : resolve()));
+  }));
+
+  const response = await fetch(`http://127.0.0.1:${server.address().port}/api/health`);
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), {
+    status: "unavailable",
+    database: "disconnected",
+  });
 });
